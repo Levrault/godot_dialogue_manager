@@ -549,7 +549,7 @@ func add_path_to_project_translations(path: String) -> void:
 
 # Export dialogue and responses to CSV
 func export_translations_to_csv(path: String) -> void:
-	var default_locale: String = DialogueSettings.get_setting("default_csv_locale", "en")
+	var defaults_locale: PackedStringArray = DialogueSettings.get_setting("default_csv_locale", "en").rsplit(",")
 
 	var file: FileAccess
 
@@ -569,7 +569,7 @@ func export_translations_to_csv(path: String) -> void:
 				is_first_line = false
 				column_count = line.size()
 				for i in range(1, line.size()):
-					if line[i] == default_locale:
+					if defaults_locale.has(line[i]):
 						default_locale_column = i
 					elif line[i] == "_character":
 						character_column = i
@@ -596,7 +596,9 @@ func export_translations_to_csv(path: String) -> void:
 	file = FileAccess.open(path, FileAccess.WRITE)
 
 	if not FileAccess.file_exists(path):
-		var headings: PackedStringArray = ["keys", default_locale]
+		var csv_heading = ["keys"]
+		csv_heading.append_array(defaults_locale)
+		var headings: PackedStringArray = csv_heading
 		if DialogueSettings.get_setting("include_character_in_translation_exports", false):
 			character_column = headings.size()
 			headings.append("_character")
@@ -649,9 +651,10 @@ func export_translations_to_csv(path: String) -> void:
 	editor_plugin.get_editor_interface().get_file_system_dock().call_deferred("navigate_to_path", path)
 
 	# Add it to the project l10n settings if it's not already there
-	var language_code: RegExMatch = RegEx.create_from_string("^[a-z]{2,3}").search(default_locale)
-	var translation_path: String = path.replace(".csv", ".%s.translation" % language_code.get_string())
-	call_deferred("add_path_to_project_translations", translation_path)
+	for locale in defaults_locale:
+		var language_code: RegExMatch = RegEx.create_from_string("^[a-z]{2,3}").search(locale)
+		var translation_path: String = path.replace(".csv", ".%s.translation" % language_code.get_string())
+		call_deferred("add_path_to_project_translations", translation_path)
 
 
 func export_character_names_to_csv(path: String) -> void:
@@ -678,7 +681,7 @@ func export_character_names_to_csv(path: String) -> void:
 	file = FileAccess.open(path, FileAccess.WRITE)
 
 	if not file.file_exists(path):
-		file.store_csv_line(["keys", DialogueSettings.get_setting("default_csv_locale", "en")])
+		file.store_csv_line(["keys", DialogueSettings.get_setting("default_csv_locale", "en").rsplit(",", false)])
 
 	# Write our translations to file
 	var known_keys: PackedStringArray = []
